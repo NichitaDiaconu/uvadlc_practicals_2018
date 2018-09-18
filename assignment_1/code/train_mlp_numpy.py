@@ -9,6 +9,8 @@ from __future__ import print_function
 import argparse
 import numpy as np
 import os
+
+import modules
 from mlp_numpy import MLP
 from modules import CrossEntropyModule
 import cifar10_utils
@@ -46,7 +48,8 @@ def accuracy(predictions, targets):
   ########################
   # PUT YOUR CODE HERE  #
   #######################
-  raise NotImplementedError
+  accuracy = np.sum(targets[np.arange(0,targets.shape[0]), np.argmax(predictions, axis=1)] == 1)
+  accuracy = float(accuracy) / targets.shape[0]
   ########################
   # END OF YOUR CODE    #
   #######################
@@ -76,7 +79,58 @@ def train():
   ########################
   # PUT YOUR CODE HERE  #
   #######################
-  raise NotImplementedError
+  # return {'train': train, 'validation': validation, 'test': test}
+  dataset_dict = cifar10_utils.get_cifar10(DATA_DIR_DEFAULT)
+  train_loader = dataset_dict['train']
+  test_loader = dataset_dict['test']
+
+  model = MLP(n_inputs=32*32*3, n_hidden=dnn_hidden_units, n_classes=10)
+
+  test_accs = []
+  train_accs = []
+  losses = []
+  for epoch in range(FLAGS.max_steps):
+    batch_x, batch_y = train_loader.next_batch(FLAGS.batch_size)
+    out = model.forward(batch_x.reshape(FLAGS.batch_size, -1))
+
+    cross_ent = CrossEntropyModule()
+    loss = cross_ent.forward(out, batch_y)
+    losses.append(round(loss,3))
+    dout = cross_ent.backward(out, batch_y)
+    model.backward(dout)
+
+    for layer in model.layers:
+      if type(layer) == modules.LinearModule:
+        layer.params['weight'] = layer.params['weight'] - FLAGS.learning_rate*layer.grads['weight']
+        layer.params['bias'] = layer.params['bias'] - FLAGS.learning_rate*layer.grads['bias']
+    if epoch % FLAGS.eval_freq == 0:
+      #print accuracy on test and train set
+      train_acc = accuracy(out, batch_y)
+      out = model.forward(test_loader.images.reshape(test_loader.images.shape[0],-1))
+      test_acc = accuracy(out, test_loader.labels)
+      print(
+        'Train Epoch: {}/{}\tLoss: {:.6f}\tTrain accuracy: {:.6f}\tTest accuracy: {:.6f}'.format(
+          epoch, FLAGS.max_steps, loss, train_acc, test_acc))
+      test_accs.append(test_acc)
+      train_accs.append(train_acc)
+  out = model.forward(test_loader.images.reshape(test_loader.images.shape[0], -1))
+  test_acc = accuracy(out, test_loader.labels)
+  print('FINAL Test accuracy: {:.6f}'.format(test_acc))
+
+  import matplotlib.pyplot as plt
+  plt.figure()
+  plt.plot([i for i in range(0, MAX_STEPS_DEFAULT, EVAL_FREQ_DEFAULT)], train_accs)
+  plt.plot([i for i in range(0, MAX_STEPS_DEFAULT, EVAL_FREQ_DEFAULT)], test_accs)
+  plt.legend(["train", "test"])
+  plt.ylabel("accuracy")
+  plt.xlabel("epoch")
+  plt.savefig("accuracy")
+  plt.figure()
+  plt.plot([i for i in range(0, MAX_STEPS_DEFAULT, 1)], losses)
+  plt.legend(["loss"])
+  plt.ylabel("loss")
+  plt.xlabel("epoch")
+  plt.savefig("loss")
   ########################
   # END OF YOUR CODE    #
   #######################

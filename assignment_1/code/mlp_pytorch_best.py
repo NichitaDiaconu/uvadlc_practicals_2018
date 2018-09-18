@@ -43,16 +43,16 @@ class MLP(nn.Module):
     self.layers = nn.ModuleList()
     in_sz = n_inputs
     # Add hidden layers
-    for sz in n_hidden:
-      layer = nn.Linear(in_sz, sz)
-      layer.bias.data.fill_(value=0)
-      layer.weight.data.normal_(mean=0, std=1e-4)
+    for idx,sz in enumerate(n_hidden):
+      if idx < 5:
+        self.layers.append(nn.Dropout(0.2))
+      layer = nn.utils.weight_norm(nn.Linear(in_sz, sz,bias=True), name='weight', dim=0)
+      self.layers.append(layer)
+      layer = nn.ReLU()
       self.layers.append(layer)
       in_sz = sz
     # Add final layer
     layer = nn.Linear(in_sz, n_classes)
-    layer.bias.data.fill_(value=0)
-    layer.weight.data.normal_(mean=0, std=1e-4)
     self.layers.append(layer)
     # Add final layer activation
     ########################
@@ -77,7 +77,7 @@ class MLP(nn.Module):
     # PUT YOUR CODE HERE  #
     #######################
     for layer in self.layers[:-1]:
-      x = nn.ReLU()(layer(x))
+      x = layer(x)
     out = nn.LogSoftmax(-1)(self.layers[-1](x))
     ########################
     # END OF YOUR CODE    #

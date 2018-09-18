@@ -6,6 +6,9 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+from torch import nn
+
+
 class ConvNet(nn.Module):
   """
   This class implements a Convolutional Neural Network in PyTorch.
@@ -29,7 +32,39 @@ class ConvNet(nn.Module):
     ########################
     # PUT YOUR CODE HERE  #
     #######################
-    raise NotImplementedError
+    super(ConvNet, self).__init__()
+    self.layers = nn.ModuleList()
+    self.layers.append(nn.Conv2d(n_channels, 64, kernel_size=3, padding=1))
+    self.layers.append(nn.BatchNorm2d(64))
+    self.layers.append(nn.ReLU())
+    self.layers.append(nn.MaxPool2d(kernel_size=3, stride=2, padding=1))
+    self.layers.append(nn.Conv2d(64, 128, kernel_size=3, padding=1))
+    self.layers.append(nn.BatchNorm2d(128))
+    self.layers.append(nn.ReLU())
+    self.layers.append(nn.MaxPool2d(kernel_size=3, stride=2, padding=1))
+    self.layers.append(nn.Conv2d(128, 256, kernel_size=3, padding=1))
+    self.layers.append(nn.BatchNorm2d(256))
+    self.layers.append(nn.ReLU())
+    self.layers.append(nn.Conv2d(256, 256, kernel_size=3, padding=1))
+    self.layers.append(nn.BatchNorm2d(256))
+    self.layers.append(nn.ReLU())
+    self.layers.append(nn.MaxPool2d(kernel_size=3, stride=2, padding=1))
+    self.layers.append(nn.Conv2d(256, 512, kernel_size=3, padding=1))
+    self.layers.append(nn.BatchNorm2d(512))
+    self.layers.append(nn.ReLU())
+    self.layers.append(nn.Conv2d(512, 512, kernel_size=3, padding=1))
+    self.layers.append(nn.BatchNorm2d(512))
+    self.layers.append(nn.ReLU())
+    self.layers.append(nn.MaxPool2d(kernel_size=3, stride=2, padding=1))
+    self.layers.append(nn.Conv2d(512, 512, kernel_size=3, padding=1))
+    self.layers.append(nn.BatchNorm2d(512))
+    self.layers.append(nn.ReLU())
+    self.layers.append(nn.Conv2d(512, 512, kernel_size=3, padding=1))
+    self.layers.append(nn.BatchNorm2d(512))
+    self.layers.append(nn.ReLU())
+    self.layers.append(nn.MaxPool2d(kernel_size=3, stride=2, padding=1))
+    self.layers.append(nn.AvgPool2d(kernel_size=1, stride=1, padding=0))
+    self.layers.append(nn.Linear(512, 10))
     ########################
     # END OF YOUR CODE    #
     #######################
@@ -51,7 +86,11 @@ class ConvNet(nn.Module):
     ########################
     # PUT YOUR CODE HERE  #
     #######################
-    raise NotImplementedError
+    for layer in self.layers[:-1]:
+      x = layer(x)
+
+    out = self.layers[-1](x[:,:,0,0])
+    out = nn.LogSoftmax(-1)(out)
     ########################
     # END OF YOUR CODE    #
     #######################

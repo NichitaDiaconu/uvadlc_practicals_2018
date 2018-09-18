@@ -22,13 +22,16 @@ class LinearModule(object):
     
     Also, initialize gradients with zeros.
     """
-    
+
     ########################
     # PUT YOUR CODE HERE  #
     #######################
     self.params = {'weight': None, 'bias': None}
     self.grads = {'weight': None, 'bias': None}
-    raise NotImplementedError
+    self.params['weight'] = np.random.normal(0, 1e-4, size=(out_features, in_features))
+    self.params['bias'] = np.zeros(shape=(out_features))
+    # self.grads['weight'] : size=(out_features, in_features)
+    # self.grads['bias'] : size=(out_features)
     ########################
     # END OF YOUR CODE    #
     #######################
@@ -47,11 +50,12 @@ class LinearModule(object):
     
     Hint: You can store intermediate variables inside the object. They can be used in backward pass computation.                                                           #
     """
-    
+
     ########################
     # PUT YOUR CODE HERE  #
     #######################
-    raise NotImplementedError
+    out = np.dot(x, self.params['weight'].T) + self.params['bias']
+    self._x = x
     ########################
     # END OF YOUR CODE    #
     #######################
@@ -75,11 +79,14 @@ class LinearModule(object):
     ########################
     # PUT YOUR CODE HERE  #
     #######################
-    raise NotImplementedError
+    dx = np.einsum('bi,ij->bj', dout, self.params['weight'])
+    #here I also sum along batch_sz for both bias and weights
+    self.grads['bias'] = np.einsum('ij->j',dout)
+    self.grads['weight'] = np.einsum('bi,bj->ij', dout, self._x)
     ########################
     # END OF YOUR CODE    #
     #######################
-    
+
     return dx
 
 class ReLUModule(object):
@@ -104,7 +111,9 @@ class ReLUModule(object):
     ########################
     # PUT YOUR CODE HERE  #
     #######################
-    raise NotImplementedError
+    out = x.copy()
+    out[out < 0] = 0
+    self.x = x
     ########################
     # END OF YOUR CODE    #
     #######################
@@ -127,10 +136,11 @@ class ReLUModule(object):
     ########################
     # PUT YOUR CODE HERE  #
     #######################
-    raise NotImplementedError
+    dout[self.x < 0] = 0
+    dx = dout
     ########################
     # END OF YOUR CODE    #
-    #######################    
+    #######################
 
     return dx
 
@@ -156,7 +166,11 @@ class SoftMaxModule(object):
     ########################
     # PUT YOUR CODE HERE  #
     #######################
-    raise NotImplementedError
+    b = np.max(x, axis=-1, keepdims=True)
+    y = np.exp(x - b)
+    out = y / np.sum(y, axis=-1, keepdims=True)
+
+    self._out = out
     ########################
     # END OF YOUR CODE    #
     #######################
@@ -179,7 +193,10 @@ class SoftMaxModule(object):
     ########################
     # PUT YOUR CODE HERE  #
     #######################
-    raise NotImplementedError
+    weight_wise_diagonal = np.einsum('bj,kj->bkj', self._out, np.eye(self._out.shape[1]))
+    weight_wise_outer_product = np.einsum('bj,bl->bjl', self._out, self._out)
+    dx_dxtilt = weight_wise_diagonal - weight_wise_outer_product
+    dx = np.einsum('bi,bij->bj', dout, dx_dxtilt)
     ########################
     # END OF YOUR CODE    #
     #######################
@@ -207,7 +224,9 @@ class CrossEntropyModule(object):
     ########################
     # PUT YOUR CODE HERE  #
     #######################
-    raise NotImplementedError
+    batch_sz = x.shape[0]
+    out = -np.einsum('bi,bi->b', np.log(x), y)
+    out = out.sum() / batch_sz
     ########################
     # END OF YOUR CODE    #
     #######################
@@ -231,7 +250,8 @@ class CrossEntropyModule(object):
     ########################
     # PUT YOUR CODE HERE  #
     #######################
-    raise NotImplementedError
+    batch_sz = x.shape[0]
+    dx = -1/batch_sz*(y/x)
     ########################
     # END OF YOUR CODE    #
     #######################

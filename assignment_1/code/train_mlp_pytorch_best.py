@@ -14,14 +14,14 @@ import torch
 from torch import nn
 from torch.autograd import Variable
 
-from mlp_pytorch import MLP
+from mlp_pytorch_best import MLP
 import cifar10_utils
 
 # Default constants
-DNN_HIDDEN_UNITS_DEFAULT = '100'
-LEARNING_RATE_DEFAULT = 2e-3
-MAX_STEPS_DEFAULT = 1500
-BATCH_SIZE_DEFAULT = 200
+DNN_HIDDEN_UNITS_DEFAULT = '2000,1000,200,200,200,200,200,200,200'
+LEARNING_RATE_DEFAULT = 1e-4
+MAX_STEPS_DEFAULT = 100000
+BATCH_SIZE_DEFAULT = 300
 EVAL_FREQ_DEFAULT = 100
 
 # Directory in which cifar data is saved
@@ -92,25 +92,26 @@ def train():
   test_images = Variable(torch.tensor(test_loader.images.reshape(test_loader.images.shape[0], -1)))
   test_labels = torch.tensor(test_loader.labels)
   model = MLP(n_inputs=32 * 32 * 3, n_hidden=dnn_hidden_units, n_classes=10).to(device)
-  #optimizer = torch.optim.Adam(model.parameters(), lr=FLAGS.learning_rate)
-  optimizer = torch.optim.SGD(model.parameters(), lr=FLAGS.learning_rate)
+  optimizer = torch.optim.Adam(model.parameters(), lr=FLAGS.learning_rate)
   criterion = nn.CrossEntropyLoss()
 
   test_accs = []
   train_accs = []
   losses = []
-
   for epoch in range(FLAGS.max_steps):
+    model.train()
     batch_x, batch_y = train_loader.next_batch(FLAGS.batch_size)
     batch_x, batch_y = Variable(torch.tensor(batch_x).to(device)), Variable(torch.tensor(batch_y).to(device))
     optimizer.zero_grad()
     out = model.forward(batch_x.reshape(FLAGS.batch_size, -1))
     loss = criterion(out, batch_y.max(1)[1])
+
     losses.append(round(float(loss), 3))
     loss.backward()
     optimizer.step()
 
     if epoch % FLAGS.eval_freq == 0:
+      model.eval()
       # print accuracy on test and train set
       train_acc = accuracy(out, batch_y)
       out = model.forward(test_images.to(device))
@@ -124,21 +125,22 @@ def train():
   out = model.forward(test_images.to(device))
   test_acc = accuracy(out, test_labels.to(device))
   print('FINAL Test accuracy: {:.6f}'.format(test_acc))
+  print('MAX accuracy: {:.6f}'.format(max(test_accs)))
 
   import matplotlib.pyplot as plt
   plt.figure()
-  plt.plot([i for i in range(0, MAX_STEPS_DEFAULT, EVAL_FREQ_DEFAULT)], train_accs)
-  plt.plot([i for i in range(0, MAX_STEPS_DEFAULT, EVAL_FREQ_DEFAULT)], test_accs)
+  plt.plot([i for i in range(0, epoch+1, EVAL_FREQ_DEFAULT)], train_accs)
+  plt.plot([i for i in range(0, epoch+1, EVAL_FREQ_DEFAULT)], test_accs)
   plt.legend(["train", "test"])
   plt.ylabel("accuracy")
   plt.xlabel("epoch")
-  plt.savefig("accuracy")
+  plt.savefig("mlp_pytorch_accuracy")
   plt.figure()
-  plt.plot([i for i in range(0, MAX_STEPS_DEFAULT, 1)], losses)
+  plt.plot([i for i in range(0, epoch+1, 1)], losses)
   plt.legend(["loss"])
   plt.ylabel("loss")
   plt.xlabel("epoch")
-  plt.savefig("loss")
+  plt.savefig("mlp_pytorch_loss")
   ########################
   # END OF YOUR CODE    #
   #######################

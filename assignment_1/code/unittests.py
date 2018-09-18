@@ -117,7 +117,7 @@ class TestLayers(unittest.TestCase):
       dout = np.random.randn(*x.shape)
 
       layer = ReLUModule()
-      
+
       out = layer.forward(x)
       dx = layer.backward(dout)
       dx_num = eval_numerical_gradient_array(lambda xx: layer.forward(xx), x, dout)

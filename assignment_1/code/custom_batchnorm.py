@@ -37,7 +37,10 @@ class CustomBatchNormAutograd(nn.Module):
     ########################
     # PUT YOUR CODE HERE  #
     #######################
-    raise NotImplementedError
+    self.n_neurons = n_neurons
+    self.eps = eps
+    self._g = nn.Parameter(torch.ones(n_neurons))
+    self._b = nn.Parameter(torch.zeros(n_neurons))
     ########################
     # END OF YOUR CODE    #
     #######################
@@ -60,7 +63,14 @@ class CustomBatchNormAutograd(nn.Module):
     ########################
     # PUT YOUR CODE HERE  #
     #######################
-    raise NotImplementedError
+    assert len(input.shape) == 2 and input.shape[1] == self.n_neurons
+    n_batch, n_neurons = input.shape
+    mean = 1/n_batch * torch.sum(input, dim=0)
+    zero_mean_x = (input - mean.unsqueeze(0))
+    var = 1/n_batch * torch.einsum('bi,bi->i', (zero_mean_x, zero_mean_x))
+    var.unsqueeze_(0)
+    input_norm = zero_mean_x / torch.sqrt(var+self.eps)
+    out = input_norm * self._g + self._b
     ########################
     # END OF YOUR CODE    #
     #######################
@@ -114,7 +124,16 @@ class CustomBatchNormManualFunction(torch.autograd.Function):
     ########################
     # PUT YOUR CODE HERE  #
     #######################
-    raise NotImplementedError
+    n_batch, n_neurons = input.shape
+    mean = 1 / n_batch * torch.sum(input, dim=0)
+    zero_mean_x = (input - mean.unsqueeze(0))
+    var = 1 / n_batch * torch.einsum('bi,bi->i', (zero_mean_x, zero_mean_x))
+    var.unsqueeze_(0)
+    norm_var = 1 / torch.sqrt(var + eps)
+    input_norm = zero_mean_x * norm_var
+    out = input_norm * gamma + beta
+    ctx.save_for_backward(zero_mean_x, norm_var, input_norm, gamma)
+    ctx.n_batch = n_batch
     ########################
     # END OF YOUR CODE    #
     #######################
@@ -142,7 +161,18 @@ class CustomBatchNormManualFunction(torch.autograd.Function):
     ########################
     # PUT YOUR CODE HERE  #
     #######################
-    raise NotImplementedError
+    zero_mean_x, norm_var, input_norm, gamma = ctx.saved_tensors
+    n_batch = ctx.n_batch
+
+    dx_norm = grad_output * gamma
+
+    term_1 = n_batch * dx_norm
+    term_2 = torch.sum(dx_norm, dim=0)
+    term_3 = input_norm * torch.sum(dx_norm * input_norm, dim=0)
+
+    grad_input = 1/n_batch * norm_var * (term_1-term_2-term_3)
+    grad_gamma = torch.sum(input_norm * grad_output, dim=0)
+    grad_beta = torch.sum(grad_output, dim=0)
     ########################
     # END OF YOUR CODE    #
     #######################
@@ -180,7 +210,10 @@ class CustomBatchNormManualModule(nn.Module):
     ########################
     # PUT YOUR CODE HERE  #
     #######################
-    raise NotImplementedError
+    self.n_neurons = n_neurons
+    self.eps = eps
+    self._g = nn.Parameter(torch.ones(n_neurons))
+    self._b = nn.Parameter(torch.zeros(n_neurons))
     ########################
     # END OF YOUR CODE    #
     #######################
@@ -203,7 +236,9 @@ class CustomBatchNormManualModule(nn.Module):
     ########################
     # PUT YOUR CODE HERE  #
     #######################
-    raise NotImplementedError
+    assert len(input.shape) == 2 and input.shape[1] == self.n_neurons
+    layer = CustomBatchNormManualFunction()
+    out = layer.apply(input, self._g, self._b, self.eps)
     ########################
     # END OF YOUR CODE    #
     #######################
