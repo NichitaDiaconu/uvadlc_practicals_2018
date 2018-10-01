@@ -27,14 +27,17 @@ import torch.utils.data as data
 
 class PalindromeDataset(data.Dataset):
 
-    def __init__(self, seq_length):
+    def __init__(self, seq_length, batch_size, train_steps):
+        self.batch_size = batch_size
+        self.train_steps = train_steps
         self.seq_length = seq_length
 
     def __len__(self):
         # Number of possible palindroms can be very big:
         # (10**(seq_length/2) or (10**((seq_length+1)/2)
         # Therefore we return the maximum integer value
-        return sys.maxsize
+        # return sys.maxsize
+        return self.batch_size * self.train_steps
 
     def __getitem__(self, idx):
         # Keep last digit as target label. Note: one-hot encoding for inputs is

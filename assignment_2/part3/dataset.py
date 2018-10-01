@@ -24,7 +24,9 @@ import torch.utils.data as data
 
 class TextDataset(data.Dataset):
 
-    def __init__(self, filename, seq_length):
+    def __init__(self, filename, seq_length, batch_size, train_steps):
+        self.batch_size = batch_size
+        self.train_steps = train_steps
         assert os.path.splitext(filename)[1] == ".txt"
         self._seq_length = seq_length
         self._data = open(filename, 'r').read()
@@ -46,7 +48,7 @@ class TextDataset(data.Dataset):
         return ''.join(self._ix_to_char[ix] for ix in char_ix)
 
     def __len__(self):
-        return self._data_size
+        return self.batch_size * self.train_steps
 
     @property
     def vocab_size(self):
